@@ -1,0 +1,82 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  output.ansi.enabled: ALWAYS
+#  cloud:
+#    gateway:
+#      routes:
+#        - id: normal
+#          uri: http://localhost:9100
+#          predicates:
+#            - Path=/api/activity
+#        - id: stripprefix
+#          uri: http://localhost:9100
+#          predicates:
+#            - Path=/stripprefix/addprefix/activity
+#          filters:
+#            - StripPrefix=2
+#            - PrefixPath=/api
+#        - id: rewrite
+#          uri: http://localhost:9100
+#          predicates:
+#            - Path=/rewrite
+#          filters:
+#            - RewritePath=/rewrite, /api/activity
+#        - id: logging
+#          uri: http://localhost:9100
+#          predicates:
+#            - Path=/logging
+#          filters:
+#            - RewritePath=/logging, /api/activity
+#            - name: Logging
+#              args:
+#                preLogger: true
+#                postLogger: true
+#        - id: circuit
+#          uri: http://localhost:9100
+#          predicates:
+#            - Path=/circuit
+#          filters:
+#            - RewritePath=/circuit, /api/activity
+#            - name: CircuitBreaker
+#              args:
+#                name: circuit
+#                fallbackUri: /fallback/unavailable-fallback
+
+logging.level.io.github.resilience4j: DEBUG
+
+resilience4j.circuitbreaker:
+  configs:
+    default:
+      slidingWindowSize: 4
+      minimumNumberOfCalls: 5
+      permittedNumberOfCallsInHalfOpenState: 3
+      automaticTransitionFromOpenToHalfOpenEnabled: true
+      waitDurationInOpenState: 2s
+      failureRateThreshold: 50
+      eventConsumerBufferSize: 10
+      recordExceptions:
+        - org.springframework.web.client.HttpServerErrorException
+        - java.io.IOException
+      ignoreExceptions:
+        - java.lang.IllegalStateException
+  instances:
+    circuit:
+      slidingWindowSize: 4
+      minimumNumberOfCalls: 10
+      permittedNumberOfCallsInHalfOpenState: 2
+      waitDurationInOpenState: 3s
+      failureRateThreshold: 50
+      eventConsumerBufferSize: 10
+      maxWaitDurationInHalfOpenState: 10s
+      recordFailurePredicate: com.phoosop.gateway.predicate.HttpInternalServicePredicate
+
+resilience4j.timelimiter:
+  time-limiter-aspect-order: 398
+  configs:
+    default:
+      timeoutDuration: 30s
+      cancelRunningFuture: false
+  instances:
+    circuit:
+      timeoutDuration: 2s
